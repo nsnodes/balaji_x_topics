@@ -449,6 +449,41 @@
             .page-header .subtitle {
                 font-size: 0.75rem;
             }
+
+            /* Mobile modal fixes */
+            #tweet-modal {
+                width: 95%;
+                max-width: none;
+                max-height: 90vh;
+                margin: 20px;
+            }
+
+            #tweet-modal-header {
+                padding: 14px 16px;
+            }
+
+            #tweet-modal-content {
+                padding: 16px;
+            }
+
+            .tweet-text {
+                font-size: 14px;
+            }
+
+            .tweet-stats {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .quoted-tweet {
+                padding: 10px 12px;
+            }
+
+            /* Mobile tooltip fixes */
+            .js-plotly-plot .plotly .hoverlayer .hovertext {
+                transform: scale(0.75);
+                transform-origin: top left;
+            }
         }
     </style>
 </head>
@@ -519,9 +554,41 @@
             }
         }
 
+        function truncateForMobile(text, maxChars = 100) {
+            if (!text) return text;
+            // Extract just the date and a short preview
+            const dateMatch = text.match(/<b>(\d{4}-\d{2}-\d{2})<\/b>/);
+            const topicMatch = text.match(/Topic:\s*(.+?)(?:<br>|$)/);
+
+            // Get the main text content (between date and Topic)
+            const textMatch = text.match(/<\/b><br>(.+?)<br><br>Topic:/s);
+            let mainText = textMatch ? textMatch[1] : '';
+
+            // Truncate main text
+            if (mainText.length > maxChars) {
+                mainText = mainText.substring(0, maxChars).trim() + '...';
+            }
+
+            // Rebuild compact tooltip
+            const date = dateMatch ? dateMatch[1] : '';
+            const topic = topicMatch ? topicMatch[1] : '';
+
+            return `<b>${date}</b><br>${mainText}<br><br>Topic: ${topic}`;
+        }
+
         function initPlot() {
             const container = document.getElementById('plot-container');
             container.innerHTML = '<div id="plot"></div>';
+
+            // Truncate hover text for mobile
+            const isMobile = window.innerWidth <= 900;
+            if (isMobile) {
+                plotData.traces.forEach(trace => {
+                    if (trace.text && Array.isArray(trace.text)) {
+                        trace.text = trace.text.map(t => truncateForMobile(t, 80));
+                    }
+                });
+            }
 
             // Enhance the layout for dark theme
             const enhancedLayout = {
@@ -564,6 +631,10 @@
                 font: {
                     family: 'Space Grotesk, Inter, sans-serif',
                     color: 'rgba(255,255,255,0.7)'
+                },
+                hoverlabel: {
+                    font: { size: 12 },
+                    namelength: -1
                 },
                 showlegend: false,
                 margin: { l: 0, r: 0, t: 0, b: 40 }
